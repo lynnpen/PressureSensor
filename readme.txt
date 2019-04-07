@@ -1,5 +1,4 @@
-Git is a distributed version control system.
-Git is free software distributed under the GPL.
-Git has a mutable index called stage.
+### README
+#### Intro
 
-asdfa
+It's a multi-threading socketserver, receiving data from Pressure Sensor Device and update sensor status into Mysql.
