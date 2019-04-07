@@ -24,22 +24,23 @@ PORT = 9150
 client_addr = []
 client_socket = []
 
+
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
     def setup(self):
         self.ip = self.client_address[0].strip()
         self.port = self.client_address[1]
         self.cur_thread = threading.current_thread()
         self.request.settimeout(90)
-        logging.info('[%s]: client=%s|msg=client is connect!' % (self.cur_thread.name, self.ip))
         client_addr.append(self.client_address)
         client_socket.append(self.request)
+        logging.info('[%s|%d]: client=%s|msg=client is connect!' % (self.cur_thread.name, len(client_socket), self.ip))
 
     def handle(self):
         while True:
             try:
                 data = self.request.recv(1024)
             except socket.timeout:
-                logging.info('[%s]: client=%s|msg=client is timeout, will disconnect' % (self.cur_thread.name, self.ip))
+                logging.info('[%s|%d]: client=%s|msg=client is timeout, will disconnect' % (self.cur_thread.name, len(client_socket), self.ip))
                 break
                 #self.request.sendall(response)
             if data == 'exit' or not data:
@@ -47,7 +48,7 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
             elif len(data) == 2:
                 a = struct.unpack('>H', data)
                 if a[0] == 37380:
-                    logging.info('[%s]: client=%s|msg=pong!' % (self.cur_thread.name, self.ip))
+                    logging.info('[%s%d]: client=%s|msg=pong!' % (self.cur_thread.name, len(client_socket), self.ip))
             elif len(data) == 14:
                 tm = int(time.time())
                 flag, title, tpt, mpa1, mpa2, vol, ext1, ext2 = struct.unpack('>HHHHHBBH', data)
@@ -57,8 +58,8 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                     mpa2 = mpa2/1000.0
                     vol_calc = lambda vol: '---' if vol == 0 else (vol+200)/100.0
                     #print 'title: %d, temp: %f, mpa1: %f, mpa2: %f, vol: %f' % (title, tpt, mpa1, mpa2, vol)
-                    logging.info('[%s]: client=%s|title=%d|temp=%f|mpa1=%f|mpa2=%f|vol=%f' % (self.cur_thread.name, \
-                            self.ip, title, tpt_calc(tpt), mpa1, mpa2, vol_calc(vol)))
+                    logging.info('[%s|%d]: client=%s|title=%d|temp=%f|mpa1=%f|mpa2=%f|vol=%f' % (self.cur_thread.name, \
+                            len(client_socket), self.ip, title, tpt_calc(tpt), mpa1, mpa2, vol_calc(vol)))
                     with connection.cursor() as cursor:
                         sql = 'select * from today_device where title=%s'
                         cursor.execute(sql, (title, ))
@@ -80,9 +81,9 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
             time.sleep(0.1)
 
     def finish(self):
-        logging.info('[%s]: client=%s|msg=client is disconnected' % (self.cur_thread.name, self.ip))
         client_addr.remove(self.client_address)
         client_socket.remove(self.request)
+        logging.info('[%s|%d]: client=%s|msg=client is disconnected' % (self.cur_thread.name, len(client_socket), self.ip))
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     allow_reuse_address = True
